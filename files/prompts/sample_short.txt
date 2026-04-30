@@ -1,0 +1,1 @@
+Local inference is no longer a curiosity. With unified-memory laptops and 24GB consumer GPUs, a 13B model in 4-bit quantization fits in budget hardware and delivers latency that hosted APIs can't match for interactive workloads. The practical question has shifted from "can we run this locally?" to "what does our hardware actually do under load?"

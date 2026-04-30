@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "local-llm-stresser"
+version = "0.1.0"
+description = "Stress-test harness for local LLM runtimes (Ollama, llama.cpp, LM Studio)."
+requires-python = ">=3.10"
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["llm", "benchmark", "stress-test", "ollama", "llama.cpp", "lm-studio", "local-inference"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Benchmark",
+]
+dependencies = [
+    "httpx>=0.27",
+    "psutil>=5.9",
+    "rich>=13.7",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+stresser = "app.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]

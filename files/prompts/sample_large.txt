@@ -1,0 +1,35 @@
+The Quiet Comeback of Local Inference
+
+For most of the past three years, the dominant assumption in applied AI has been that serious work happens in someone else's datacenter. The argument was simple: frontier models are too large to fit on consumer hardware, the gap between hosted and local quality is enormous, and operating your own GPU is more headache than it's worth. Each of those three claims has weakened in the last twelve months, and a small but growing fraction of teams now find that running a 7B–70B parameter model on a workstation is not only feasible but, for some workloads, preferable.
+
+The first thing to change was the hardware floor. Apple's unified-memory M-series chips put 64–192GB of GPU-addressable RAM into a laptop-sized box, and consumer NVIDIA cards now ship with 16–24GB of VRAM at price points that were unimaginable in 2021. The second was quantization. Aggressive 4-bit and 5-bit quantization schemes — GGUF's K-quants, AWQ, GPTQ — preserve most of the quality of a full-precision model while cutting memory needs by 3–4×. A 13B model that needed 26GB of VRAM in fp16 fits comfortably in 8GB at Q4_K_M.
+
+The third, and probably most underappreciated, change was the runtime ecosystem. llama.cpp, Ollama, and LM Studio have collectively turned what used to be a weekend of CUDA wrangling into a single command. All three expose the OpenAI chat-completions API, which means existing application code rarely needs to change to swap a local model in for a hosted one.
+
+What Quantization Actually Costs
+
+The headline numbers on quantization understate the picture. A naive reading of "Q4 vs fp16" suggests a 4× memory saving in exchange for some unspecified quality loss. The reality is more nuanced. K-quants — the GGUF family that includes Q4_K_M, Q5_K_M, and Q6_K — apply different bit-widths to different parts of the model, with the most "important" weights kept at higher precision. The result is that Q5_K_M is often statistically indistinguishable from fp16 on standard benchmarks, while Q4_K_M loses 1–3 points on reasoning-heavy evals.
+
+The cost shows up in long-tail behavior more than in average quality. A heavily quantized model is more likely to hallucinate when pushed past its training distribution, more likely to drift in long conversations, and more likely to fail on niche domains. For high-volume, well-bounded workloads — code completion, document classification, structured extraction — this rarely matters. For open-ended reasoning or creative work, the gap is real.
+
+The Throughput Question
+
+The most interesting metric for production deployment isn't single-request latency. It's how many concurrent users a single box can serve before tail latencies become unacceptable. This is where local inference gets surprising. A well-tuned llama.cpp server with continuous batching can serve 8–16 concurrent requests at acceptable latency on a single 24GB GPU, depending on context length distribution. That's a meaningful chunk of an internal team's workload, sometimes all of it.
+
+The dynamics of batched inference are non-obvious. A batch of one request takes a fixed amount of time per generated token, dominated by the cost of moving model weights from VRAM to compute. A batch of eight requests doesn't take eight times longer — the weight movement is amortized across all requests in the batch. Throughput grows nearly linearly until you hit either the compute ceiling or the memory bandwidth ceiling, then plateaus.
+
+Time-to-first-token is the harder metric. It's dominated by prefill — running the entire prompt through the model to populate the KV cache before generation can begin. For a 4KB prompt on a 7B model, prefill takes 100–300ms on a consumer GPU. For a 32KB prompt, it can take seconds. This is why long-context workloads are surprisingly latency-sensitive, and why prompt caching is so valuable when the same context appears across multiple queries.
+
+The Operational Picture
+
+The case for local is not universal. Frontier reasoning models still live in the cloud, and they will for the foreseeable future. But for high-volume, latency-sensitive, or privacy-constrained workloads — code completion in an IDE, document summarization on confidential corpora, voice agents that need sub-300ms time-to-first-token — the math has quietly flipped. Sending every keystroke to a hosted model costs more than the workstation that would handle it locally, and the round trip alone often exceeds the budget for an interactive feel.
+
+What's missing, in most teams that have started experimenting, is a clear-eyed picture of what their hardware can actually do. "It feels fast" is not a benchmark. The interesting questions — how many concurrent users can a single box serve, what does latency look like at p95 versus p50, how does throughput collapse as context length grows — require deliberate measurement. The teams that take that step early tend to be the ones that ship local inference into production. The ones that don't tend to discover the limits in the worst possible way: in front of a customer.
+
+The Tooling Gap
+
+Stress testing local inference is, today, a do-it-yourself affair. Hosted providers benchmark themselves at scale and publish results; local-runtime users mostly compare GitHub issue threads and Reddit posts. A standard benchmark suite — one that exercises the full latency surface, captures system metrics, and produces comparable numbers across runtimes — would meaningfully accelerate the field.
+
+The shape of such a tool is becoming clear. It needs an adapter layer over OpenAI-compatible APIs (since that's the lingua franca of every local runtime). It needs workload generators for the obvious shapes: short-prompt high-QPS, long-context low-QPS, batched-uniform, mixed-realistic. It needs to capture per-request TTFT, decode tokens-per-second, and total latency, plus system-level CPU, memory, GPU utilization, VRAM, and thermals. And it needs to record everything to a queryable store so that yesterday's run can be compared to today's.
+
+None of this is hard. None of it is novel. What's been missing is the discipline to actually do it, in a form that other teams can adopt without a week of engineering effort. The current generation of local inference servers is good enough that the bottleneck is no longer the runtime — it's the absence of a culture of measurement around them.
