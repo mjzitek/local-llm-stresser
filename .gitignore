@@ -35,3 +35,6 @@ htmlcov/
 .idea/
 .DS_Store
 *.swp
+
+# Claude Code agent guidance — local-only, not part of the public repo
+CLAUDE.md
