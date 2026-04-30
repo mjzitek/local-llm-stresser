@@ -122,6 +122,8 @@ def run_wizard() -> int:
         ("benchmark", "prefill",     f"{'prefill':<14} — Prefill-speed sweep across prompt sizes"),
         ("benchmark", "concurrency", f"{'concurrency':<14} — Concurrency sweep — find the throughput knee"),
         ("benchmark", "suite",       f"{'suite':<14} — Full scenario suite (cross-machine comparable)"),
+        ("benchmark", "context-stress", f"{'context-stress':<14} — Needle-in-a-haystack across context tiers"),
+        ("benchmark", "vision",      f"{'vision':<14} — Vision/OCR test (multimodal model required)"),
     ])
     tidx = _menu("Pick a test:", [o[2] for o in options])
     kind, key, _ = options[tidx]
@@ -157,6 +159,10 @@ def run_wizard() -> int:
         return _run_concurrency(cfg, detailed=detailed)
     if key == "suite":
         return _run_suite(cfg)
+    if key == "context-stress":
+        return _run_context_stress(cfg, detailed=detailed)
+    if key == "vision":
+        return _run_vision(cfg)
     return 1
 
 
@@ -233,6 +239,23 @@ def _run_prefill(cfg, *, detailed: bool) -> int:
 def _run_suite(cfg) -> int:
     from app.benchmarks import suite
     return asyncio.run(suite.run(cfg, warmup=1))
+
+
+def _run_context_stress(cfg, *, detailed: bool) -> int:
+    from app.benchmarks import context_stress
+    if detailed:
+        tiers_str = _ask("Context tiers in K tokens (comma-separated)",
+                         "1,4,16,32,64,128")
+        depth = float(_ask("Needle depth (0=start, 0.5=middle, 1=end)", "0.5"))
+    else:
+        tiers_str, depth = "1,4,16,32,64,128", 0.5
+    tiers_k = [int(x) for x in tiers_str.split(",") if x.strip()]
+    return asyncio.run(context_stress.run(cfg, tiers_k=tiers_k, depth_pct=depth))
+
+
+def _run_vision(cfg) -> int:
+    from app.benchmarks import vision
+    return asyncio.run(vision.run(cfg))
 
 
 def _run_concurrency(cfg, *, detailed: bool) -> int:

@@ -214,6 +214,22 @@ def cmd_suite(args) -> int:
     return asyncio.run(suite.run(cfg, warmup=args.warmup, only=only))
 
 
+def cmd_context_stress(args) -> int:
+    from app.benchmarks import context_stress
+    cfg = _auto_resolve(args)
+    tiers = [int(x) for x in args.tiers.split(",") if x.strip()]
+    return asyncio.run(context_stress.run(
+        cfg, tiers_k=tiers, depth_pct=args.depth, auto_max=not args.no_auto_max,
+    ))
+
+
+def cmd_vision(args) -> int:
+    from app.benchmarks import vision
+    cfg = _auto_resolve(args)
+    only = [s.strip() for s in args.only.split(",")] if args.only else None
+    return asyncio.run(vision.run(cfg, only=only))
+
+
 # ---------------- argparse wiring ---------------- #
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -279,6 +295,24 @@ def build_parser() -> argparse.ArgumentParser:
     ps.add_argument("--only", default=None,
                     help="comma-separated subset of scenario names")
     ps.set_defaults(func=cmd_suite)
+
+    pcs = sub.add_parser("context-stress",
+                          help="needle-in-a-haystack: how well does the model use its context?")
+    _add_common(pcs)
+    pcs.add_argument("--tiers", default="1,4,16,32,64,128",
+                     help="comma-separated context-token tiers in K (e.g. 1,4,16,64)")
+    pcs.add_argument("--depth", type=float, default=0.5,
+                     help="needle position as fraction of prompt (0=start, 1=end)")
+    pcs.add_argument("--no-auto-max", action="store_true",
+                     help="don't auto-cap tiers at the model's reported max context")
+    pcs.set_defaults(func=cmd_context_stress)
+
+    pv = sub.add_parser("vision",
+                        help="vision/OCR benchmark — needs a multimodal model (moondream, gemma4, llava)")
+    _add_common(pv)
+    pv.add_argument("--only", default=None,
+                    help="comma-separated substrings; only test images whose name contains one")
+    pv.set_defaults(func=cmd_vision)
 
     return p
 

@@ -25,6 +25,7 @@ dependencies = [
     "psutil>=5.9",
     "rich>=13.7",
     "python-dotenv>=1.0",
+    "Pillow>=10.0",
 ]
 
 [project.scripts]

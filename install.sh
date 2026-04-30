@@ -18,6 +18,9 @@ if [ ! -f .env ]; then
   echo "[install] wrote .env from .env.example — edit it to point at your runtime"
 fi
 
+# Generate vision test images (idempotent; safe to re-run)
+python scripts/generate_test_images.py
+
 echo
 echo "Done. Activate with:  source env/bin/activate"
 echo "Then try:             stresser runtimes"

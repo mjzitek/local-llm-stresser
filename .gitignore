@@ -38,3 +38,4 @@ htmlcov/
 
 # Claude Code agent guidance — local-only, not part of the public repo
 CLAUDE.md
+.agent-docs/

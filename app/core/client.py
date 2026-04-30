@@ -66,12 +66,32 @@ class LLMClient:
         model: str | None = None,
         extra: dict | None = None,
         capture_output: bool = False,
+        images: list[str] | None = None,
     ) -> RequestRecord:
-        """Send one chat request, stream tokens, return timing record."""
+        """Send one chat request, stream tokens, return timing record.
+
+        `images` is a list of file paths; each is base64-encoded and attached
+        as a `image_url` content part on the user message (OpenAI multimodal
+        format, supported by Ollama for vision-capable models).
+        """
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
+        if images:
+            import base64, mimetypes
+            parts = [{"type": "text", "text": prompt}]
+            for img_path in images:
+                mime, _ = mimetypes.guess_type(img_path)
+                mime = mime or "image/png"
+                with open(img_path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("ascii")
+                parts.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{b64}"},
+                })
+            messages.append({"role": "user", "content": parts})
+        else:
+            messages.append({"role": "user", "content": prompt})
 
         payload: dict = {
             "model": model or self.cfg.model,

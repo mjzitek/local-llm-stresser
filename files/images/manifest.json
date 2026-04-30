@@ -1,0 +1,56 @@
+{
+  "text_block.png": {
+    "expected_text": [
+      "ROOM 247",
+      "MEETING IN PROGRESS"
+    ],
+    "task": "ocr",
+    "description": "A sign reading 'ROOM 247' and 'MEETING IN PROGRESS'."
+  },
+  "chart.png": {
+    "expected_text": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Tickets Per Day",
+      "12",
+      "18",
+      "7",
+      "22",
+      "15"
+    ],
+    "task": "chart",
+    "description": "A bar chart titled 'Tickets Per Day' with bars for Mon=12, Tue=18, Wed=7, Thu=22, Fri=15. The peak is Thursday.",
+    "key_facts": [
+      "the chart title is Tickets Per Day",
+      "the highest bar is Thursday at 22",
+      "the lowest bar is Wednesday at 7"
+    ]
+  },
+  "scene.png": {
+    "expected_text": [],
+    "task": "scene",
+    "description": "A simple drawing of a tan house with a red triangular roof and a brown door, on green grass under a blue sky with a yellow sun in the upper right.",
+    "key_facts": [
+      "there is a house",
+      "the roof is red",
+      "the sky is blue",
+      "the sun is in the upper right"
+    ]
+  },
+  "code.png": {
+    "expected_text": [
+      "def fibonacci(n):",
+      "fibonacci(10)"
+    ],
+    "task": "code-ocr",
+    "description": "A dark-themed code screenshot showing a Python fibonacci function and a call to fibonacci(10).",
+    "key_facts": [
+      "the language is Python",
+      "the function is fibonacci",
+      "it is recursive"
+    ]
+  }
+}
