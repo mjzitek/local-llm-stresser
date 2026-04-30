@@ -5,18 +5,25 @@ from rich.console import Console
 from rich.table import Table
 
 from app.core.client import RequestRecord
+from app.core.host_info import host_summary
 
-BANNER_WIDTH = 70
+BANNER_WIDTH = 78
 
 
 def print_run_banner(fields: dict[str, str]) -> None:
     """Print the loud run header/footer block.
 
-    Same block is shown at the start (so you see it before progress lines)
-    and at the end (so a screenshot of stats includes the model + params).
+    Includes host details (computer name, OS, CPU, RAM, GPU) ahead of the
+    run-specific fields, so a screenshot tells you both *what* ran and
+    *where* it ran.
     """
+    host = host_summary()
     print("=" * BANNER_WIDTH)
-    label_width = max(len(k) for k in fields)
+    all_fields = {**host, **fields}
+    label_width = max(len(k) for k in all_fields)
+    for k, v in host.items():
+        print(f"  {k:<{label_width}} : {v}")
+    print("-" * BANNER_WIDTH)
     for k, v in fields.items():
         print(f"  {k:<{label_width}} : {v}")
     print("=" * BANNER_WIDTH)
