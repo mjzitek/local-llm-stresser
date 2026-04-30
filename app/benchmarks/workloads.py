@@ -120,6 +120,21 @@ def workload_qa_file(filename: str = "sample_medium.txt") -> Workload:
     )
 
 
+def workload_compare_contrast() -> Workload:
+    return Workload(
+        name="compare-contrast",
+        description="Open-ended compare/contrast essay — Star Trek vs Star Wars.",
+        system="You are a thoughtful writer. Use clear structure with sections.",
+        user=(
+            "Compare and contrast Star Trek and Star Wars. Cover at minimum: "
+            "tone and worldview, technology vs mysticism, episodic vs serialized "
+            "storytelling, the role of the Federation/Empire, and what each "
+            "franchise says about the future. Aim for ~500 words."
+        ),
+        max_tokens=800,
+    )
+
+
 def workload_extraction() -> Workload:
     return Workload(
         name="extraction",
@@ -144,6 +159,7 @@ REGISTRY: dict[str, callable] = {
     "summarize": workload_summarize_file,
     "qa": workload_qa_file,
     "extraction": workload_extraction,
+    "compare-contrast": workload_compare_contrast,
 }
 
 

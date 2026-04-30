@@ -45,6 +45,26 @@ def print_summary(title: str, records: list[RequestRecord], extra: dict | None =
     if s["completion_tokens_avg"]:
         c.print(f"avg completion tokens: {s['completion_tokens_avg']:.0f}")
 
+    # Per-request table — always shown so individual runs are visible.
+    per = Table(title="Per-request results", show_header=True, header_style="bold")
+    per.add_column("#", justify="right")
+    per.add_column("status")
+    per.add_column("ttft (ms)", justify="right")
+    per.add_column("total (ms)", justify="right")
+    per.add_column("decode tps", justify="right")
+    per.add_column("out tok", justify="right")
+    for i, r in enumerate(records, 1):
+        per.add_row(
+            str(i),
+            "OK" if r.ok else "ERR",
+            f"{r.ttft_ms:.0f}" if r.ttft_ms else "—",
+            f"{r.total_ms:.0f}" if r.total_ms else "—",
+            f"{r.decode_tps:.1f}" if r.decode_tps else "—",
+            str(r.completion_tokens) if r.completion_tokens else "—",
+        )
+    c.print(per)
+
+    # Percentile tables — always shown, but caveat at low n.
     def row(name: str, d: dict | None, unit: str):
         if not d:
             return
@@ -57,6 +77,9 @@ def print_summary(title: str, records: list[RequestRecord], extra: dict | None =
     row("TTFT", s["ttft_ms"], " ms")
     row("Total latency", s["total_ms"], " ms")
     row("Decode tokens/sec", s["decode_tps"], "")
+    if s["n"] < 10:
+        c.print(f"[dim](note: only {s['n']} samples — tail percentiles "
+                f"collapse; run with --n 10+ for meaningful p95/p99)[/dim]")
 
     if extra:
         c.rule("[bold]Extras")

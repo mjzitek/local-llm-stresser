@@ -195,7 +195,7 @@ def _run_task(cfg, *, workload_name: str, detailed: bool) -> int:
         n, concurrency, max_tokens = QUICK_TASK_N, QUICK_TASK_CONCURRENCY, workload_max_tokens
         # quick mode: show outputs by default for content-y workloads
         show = workload_name in ("simple", "chat", "code-function", "code-refactor",
-                                 "summarize", "qa", "extraction")
+                                 "summarize", "qa", "extraction", "compare-contrast")
 
     return asyncio.run(task.run(
         cfg, workload=workload_name, size=size_arg,
