@@ -220,6 +220,7 @@ def cmd_context_stress(args) -> int:
     tiers = [int(x) for x in args.tiers.split(",") if x.strip()]
     return asyncio.run(context_stress.run(
         cfg, tiers_k=tiers, depth_pct=args.depth, auto_max=not args.no_auto_max,
+        answer_max_tokens=args.answer_max_tokens,
     ))
 
 
@@ -305,6 +306,9 @@ def build_parser() -> argparse.ArgumentParser:
                      help="needle position as fraction of prompt (0=start, 1=end)")
     pcs.add_argument("--no-auto-max", action="store_true",
                      help="don't auto-cap tiers at the model's reported max context")
+    pcs.add_argument("--answer-max-tokens", type=int, default=4096,
+                     help="max tokens for the model's answer (default 4096; "
+                          "reasoning models burn lots of these on <think> blocks)")
     pcs.set_defaults(func=cmd_context_stress)
 
     pv = sub.add_parser("vision",

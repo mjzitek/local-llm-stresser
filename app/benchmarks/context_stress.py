@@ -109,7 +109,7 @@ async def run(
     tiers_k: list[int] | None = None,
     depth_pct: float = 0.5,
     auto_max: bool = True,
-    answer_max_tokens: int = 512,  # generous so reasoning models have room to think + answer
+    answer_max_tokens: int = 4096,  # high enough that reasoning models can think+answer
 ) -> int:
     tiers_k = sorted(tiers_k or DEFAULT_TIERS_K)
     fp = model_footprint(cfg.model)
