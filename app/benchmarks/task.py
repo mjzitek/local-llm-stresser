@@ -9,7 +9,7 @@ from app.core.client import LLMClient, RequestRecord
 from app.core.config import Config
 from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
-from app.core.report import print_summary, summarize_records
+from app.core.report import print_run_banner, print_summary, summarize_records
 from app.core.sysmon import SysMonitor
 
 
@@ -42,14 +42,15 @@ async def run(
          "warmup": warmup, "file": file, "size": size},
     )
     fp = model_footprint(cfg.model)
-    print("=" * 70)
-    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
-    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
-    print(f"  WORKLOAD : {wl.name}  — {wl.description}")
-    print(f"  PARAMS   : n={n}  concurrency={concurrency}  "
-          f"max_tokens={max_tokens or wl.max_tokens}  prompt_chars={len(wl.user)}")
-    print(f"  RUN ID   : {run_id}")
-    print("=" * 70)
+    banner = {
+        "MODEL": f"{cfg.model}" + (f"   [{fp}]" if fp else ""),
+        "RUNTIME": f"{cfg.runtime}  ({cfg.base_url})",
+        "WORKLOAD": f"{wl.name}  — {wl.description}",
+        "PARAMS": (f"n={n}  concurrency={concurrency}  "
+                   f"max_tokens={max_tokens or wl.max_tokens}  prompt_chars={len(wl.user)}"),
+        "RUN ID": run_id,
+    }
+    print_run_banner(banner)
 
     async with LLMClient(cfg) as client, SysMonitor(interval=1.0) as mon:
         for i in range(warmup):
@@ -92,4 +93,5 @@ async def run(
         f"Task: {wl.name}", records,
         extra={"wall_s": f"{wall:.2f}", "aggregate_decode_tps": f"{agg_tps:.1f}"},
     )
+    print_run_banner(banner)
     return 0 if all(r.ok for r in records) else 1

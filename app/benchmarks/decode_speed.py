@@ -9,7 +9,7 @@ from app.core.client import LLMClient
 from app.core.config import Config
 from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
-from app.core.report import print_summary, summarize_records
+from app.core.report import print_run_banner, print_summary, summarize_records
 from app.core.sysmon import SysMonitor
 
 PROMPT = (
@@ -24,12 +24,13 @@ async def run(cfg: Config, *, n: int = 5, max_tokens: int = 1024, warmup: int = 
         {"n": n, "max_tokens": max_tokens, "warmup": warmup},
     )
     fp = model_footprint(cfg.model)
-    print("=" * 70)
-    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
-    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
-    print(f"  TEST     : decode-throughput  (n={n}, max_tokens={max_tokens})")
-    print(f"  RUN ID   : {run_id}")
-    print("=" * 70)
+    banner = {
+        "MODEL": f"{cfg.model}" + (f"   [{fp}]" if fp else ""),
+        "RUNTIME": f"{cfg.runtime}  ({cfg.base_url})",
+        "TEST": f"decode-throughput  (n={n}, max_tokens={max_tokens})",
+        "RUN ID": run_id,
+    }
+    print_run_banner(banner)
 
     async with LLMClient(cfg) as client, SysMonitor(interval=1.0) as mon:
         for i in range(warmup):
@@ -49,4 +50,5 @@ async def run(cfg: Config, *, n: int = 5, max_tokens: int = 1024, warmup: int = 
     save_samples(run_id, mon.samples)
     finish_run(run_id, {"records": summarize_records(records), "system": mon.summary()})
     print_summary("Decode Speed", records, extra={"system": mon.summary()})
+    print_run_banner(banner)
     return 0 if all(r.ok for r in records) else 1

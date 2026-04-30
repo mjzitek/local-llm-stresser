@@ -6,6 +6,21 @@ from rich.table import Table
 
 from app.core.client import RequestRecord
 
+BANNER_WIDTH = 70
+
+
+def print_run_banner(fields: dict[str, str]) -> None:
+    """Print the loud run header/footer block.
+
+    Same block is shown at the start (so you see it before progress lines)
+    and at the end (so a screenshot of stats includes the model + params).
+    """
+    print("=" * BANNER_WIDTH)
+    label_width = max(len(k) for k in fields)
+    for k, v in fields.items():
+        print(f"  {k:<{label_width}} : {v}")
+    print("=" * BANNER_WIDTH)
+
 
 def percentiles(vals: list[float], pcts=(50, 90, 95, 99)) -> dict[int, float]:
     if not vals:

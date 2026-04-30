@@ -8,7 +8,7 @@ from app.core.client import LLMClient, RequestRecord
 from app.core.config import Config
 from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
-from app.core.report import percentiles, summarize_records
+from app.core.report import percentiles, print_run_banner, summarize_records
 from app.core.sysmon import SysMonitor
 
 PROMPT = "Explain how HTTP works in about 200 words."
@@ -33,12 +33,13 @@ async def run(cfg: Config, *, levels: list[int], reqs_per_level: int = 16, max_t
         {"levels": levels, "reqs_per_level": reqs_per_level, "max_tokens": max_tokens},
     )
     fp = model_footprint(cfg.model)
-    print("=" * 70)
-    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
-    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
-    print(f"  TEST     : concurrency sweep  (levels={levels}, reqs/level={reqs_per_level})")
-    print(f"  RUN ID   : {run_id}")
-    print("=" * 70)
+    banner = {
+        "MODEL": f"{cfg.model}" + (f"   [{fp}]" if fp else ""),
+        "RUNTIME": f"{cfg.runtime}  ({cfg.base_url})",
+        "TEST": f"concurrency sweep  (levels={levels}, reqs/level={reqs_per_level})",
+        "RUN ID": run_id,
+    }
+    print_run_banner(banner)
 
     all_records: list[RequestRecord] = []
     rows: list[dict] = []
@@ -74,4 +75,5 @@ async def run(cfg: Config, *, levels: list[int], reqs_per_level: int = 16, max_t
     save_records(run_id, all_records)
     save_samples(run_id, mon.samples)
     finish_run(run_id, {"records": summarize_records(all_records), "system": mon.summary(), "levels": rows})
+    print_run_banner(banner)
     return 0 if all(r.ok for r in all_records) else 1

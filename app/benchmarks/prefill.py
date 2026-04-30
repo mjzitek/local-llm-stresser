@@ -8,7 +8,7 @@ from app.core.client import LLMClient
 from app.core.config import Config
 from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
-from app.core.report import print_summary, summarize_records
+from app.core.report import print_run_banner, print_summary, summarize_records
 from app.core.sysmon import SysMonitor
 
 FILLER_WORD = "lorem ipsum dolor sit amet consectetur adipiscing elit. "
@@ -26,12 +26,13 @@ async def run(cfg: Config, *, sizes: list[int], reps: int = 3) -> int:
         {"sizes": sizes, "reps": reps},
     )
     fp = model_footprint(cfg.model)
-    print("=" * 70)
-    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
-    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
-    print(f"  TEST     : prefill sweep  (sizes={sizes}, reps={reps})")
-    print(f"  RUN ID   : {run_id}")
-    print("=" * 70)
+    banner = {
+        "MODEL": f"{cfg.model}" + (f"   [{fp}]" if fp else ""),
+        "RUNTIME": f"{cfg.runtime}  ({cfg.base_url})",
+        "TEST": f"prefill sweep  (sizes={sizes}, reps={reps})",
+        "RUN ID": run_id,
+    }
+    print_run_banner(banner)
 
     all_records = []
     async with LLMClient(cfg) as client, SysMonitor(interval=1.0) as mon:
@@ -55,4 +56,5 @@ async def run(cfg: Config, *, sizes: list[int], reps: int = 3) -> int:
     save_samples(run_id, mon.samples)
     finish_run(run_id, {"records": summarize_records(all_records), "system": mon.summary()})
     print_summary("Prefill", all_records)
+    print_run_banner(banner)
     return 0 if all(r.ok for r in all_records) else 1
