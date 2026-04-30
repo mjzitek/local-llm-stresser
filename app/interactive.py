@@ -121,6 +121,7 @@ def run_wizard() -> int:
         ("benchmark", "decode",      f"{'decode':<14} — Decode-throughput benchmark (long output)"),
         ("benchmark", "prefill",     f"{'prefill':<14} — Prefill-speed sweep across prompt sizes"),
         ("benchmark", "concurrency", f"{'concurrency':<14} — Concurrency sweep — find the throughput knee"),
+        ("benchmark", "suite",       f"{'suite':<14} — Full scenario suite (cross-machine comparable)"),
     ])
     tidx = _menu("Pick a test:", [o[2] for o in options])
     kind, key, _ = options[tidx]
@@ -154,6 +155,8 @@ def run_wizard() -> int:
         return _run_prefill(cfg, detailed=detailed)
     if key == "concurrency":
         return _run_concurrency(cfg, detailed=detailed)
+    if key == "suite":
+        return _run_suite(cfg)
     return 1
 
 
@@ -225,6 +228,11 @@ def _run_prefill(cfg, *, detailed: bool) -> int:
         sizes_str, reps = PREFILL_DEFAULT_SIZES, PREFILL_DEFAULT_REPS
     sizes = [int(x) for x in sizes_str.split(",") if x.strip()]
     return asyncio.run(prefill.run(cfg, sizes=sizes, reps=reps))
+
+
+def _run_suite(cfg) -> int:
+    from app.benchmarks import suite
+    return asyncio.run(suite.run(cfg, warmup=1))
 
 
 def _run_concurrency(cfg, *, detailed: bool) -> int:

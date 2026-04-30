@@ -207,6 +207,13 @@ def cmd_concurrency(args) -> int:
     ))
 
 
+def cmd_suite(args) -> int:
+    from app.benchmarks import suite
+    cfg = _auto_resolve(args)
+    only = [s.strip() for s in args.only.split(",")] if args.only else None
+    return asyncio.run(suite.run(cfg, warmup=args.warmup, only=only))
+
+
 # ---------------- argparse wiring ---------------- #
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -265,6 +272,13 @@ def build_parser() -> argparse.ArgumentParser:
     pc.add_argument("--reqs-per-level", type=int, default=16)
     pc.add_argument("--max-tokens", type=int, default=256)
     pc.set_defaults(func=cmd_concurrency)
+
+    ps = sub.add_parser("suite", help="run the fixed scenario suite (cross-machine comparable)")
+    _add_common(ps)
+    ps.add_argument("--warmup", type=int, default=1)
+    ps.add_argument("--only", default=None,
+                    help="comma-separated subset of scenario names")
+    ps.set_defaults(func=cmd_suite)
 
     return p
 
