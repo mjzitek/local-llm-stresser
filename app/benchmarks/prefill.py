@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from app.core.client import LLMClient
 from app.core.config import Config
+from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
 from app.core.report import print_summary, summarize_records
 from app.core.sysmon import SysMonitor
@@ -24,7 +25,13 @@ async def run(cfg: Config, *, sizes: list[int], reps: int = 3) -> int:
         "prefill", cfg.runtime, cfg.base_url, cfg.model,
         {"sizes": sizes, "reps": reps},
     )
-    print(f"run_id={run_id}  runtime={cfg.runtime}  model={cfg.model}  url={cfg.base_url}")
+    fp = model_footprint(cfg.model)
+    print("=" * 70)
+    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
+    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
+    print(f"  TEST     : prefill sweep  (sizes={sizes}, reps={reps})")
+    print(f"  RUN ID   : {run_id}")
+    print("=" * 70)
 
     all_records = []
     async with LLMClient(cfg) as client, SysMonitor(interval=1.0) as mon:

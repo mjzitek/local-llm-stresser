@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from app.core.client import LLMClient
 from app.core.config import Config
+from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
 from app.core.report import print_summary, summarize_records
 from app.core.sysmon import SysMonitor
@@ -22,7 +23,13 @@ async def run(cfg: Config, *, n: int = 5, max_tokens: int = 1024, warmup: int = 
         "decode_speed", cfg.runtime, cfg.base_url, cfg.model,
         {"n": n, "max_tokens": max_tokens, "warmup": warmup},
     )
-    print(f"run_id={run_id}  runtime={cfg.runtime}  model={cfg.model}  url={cfg.base_url}")
+    fp = model_footprint(cfg.model)
+    print("=" * 70)
+    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
+    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
+    print(f"  TEST     : decode-throughput  (n={n}, max_tokens={max_tokens})")
+    print(f"  RUN ID   : {run_id}")
+    print("=" * 70)
 
     async with LLMClient(cfg) as client, SysMonitor(interval=1.0) as mon:
         for i in range(warmup):

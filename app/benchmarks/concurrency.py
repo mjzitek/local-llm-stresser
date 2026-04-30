@@ -6,6 +6,7 @@ import time
 
 from app.core.client import LLMClient, RequestRecord
 from app.core.config import Config
+from app.core.model_info import model_footprint
 from app.core.recorder import finish_run, new_run, save_records, save_samples
 from app.core.report import percentiles, summarize_records
 from app.core.sysmon import SysMonitor
@@ -31,7 +32,13 @@ async def run(cfg: Config, *, levels: list[int], reqs_per_level: int = 16, max_t
         "concurrency", cfg.runtime, cfg.base_url, cfg.model,
         {"levels": levels, "reqs_per_level": reqs_per_level, "max_tokens": max_tokens},
     )
-    print(f"run_id={run_id}  runtime={cfg.runtime}  model={cfg.model}  url={cfg.base_url}")
+    fp = model_footprint(cfg.model)
+    print("=" * 70)
+    print(f"  MODEL    : {cfg.model}" + (f"   [{fp}]" if fp else ""))
+    print(f"  RUNTIME  : {cfg.runtime}  ({cfg.base_url})")
+    print(f"  TEST     : concurrency sweep  (levels={levels}, reqs/level={reqs_per_level})")
+    print(f"  RUN ID   : {run_id}")
+    print("=" * 70)
 
     all_records: list[RequestRecord] = []
     rows: list[dict] = []

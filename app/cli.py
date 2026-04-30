@@ -49,11 +49,14 @@ def _print_banner(show_models: bool = False, max_models: int = 6) -> list[Detect
 
 
 def _auto_resolve(args) -> Config:
-    """Pick a runtime/model intelligently. Falls back to detection when:
-    - no runtime specified (CLI or env), or
-    - the chosen runtime's URL isn't responding, or
-    - the chosen model isn't actually loaded on that runtime.
+    """Resolve runtime + model. Prompts the user for anything not pre-specified
+    on the CLI (or in env) when stdin is a TTY. When stdin isn't a TTY (piped /
+    CI), falls back to first-available auto-pick to keep scripts working.
     """
+    from app.interactive import _menu  # reuse the same menu helper
+
+    interactive = sys.stdin.isatty()
+
     env_runtime = os.environ.get("LLM_RUNTIME")
     env_model = os.environ.get("LLM_MODEL")
     runtime = args.runtime or env_runtime
@@ -63,14 +66,31 @@ def _auto_resolve(args) -> Config:
     results = _detect_sync()
     avail = [d for d in results if d.available]
 
-    # 1. Resolve runtime — prefer the requested one if it's responding.
+    if not avail:
+        print("[warn] no local LLM runtime detected on default ports; "
+              "request will likely fail", file=sys.stderr)
+        return load_config(runtime=runtime, base_url=base_url, model=model, api_key=args.api_key)
+
+    # 1. Resolve runtime
     chosen: Detected | None = None
-    if runtime and not base_url:
+    if base_url:
+        # explicit url wins; trust the user
+        pass
+    elif runtime:
         chosen = next((d for d in avail if d.name == runtime), None)
-        if not chosen and avail:
-            print(f"[auto] runtime={runtime} not responding; switching to {avail[0].name}")
+        if not chosen:
+            print(f"[auto] runtime={runtime} not responding; falling back")
             chosen = avail[0]
-    elif not runtime and not base_url and avail:
+    elif len(avail) == 1:
+        chosen = avail[0]
+    elif interactive:
+        idx = _menu(
+            "Pick a runtime:",
+            [f"{d.name}  ({d.base_url}, {len(d.models)} models)" for d in avail],
+        )
+        chosen = avail[idx]
+        print()
+    else:
         chosen = avail[0]
         print(f"[auto] using runtime={chosen.name} ({chosen.base_url})")
 
@@ -78,27 +98,33 @@ def _auto_resolve(args) -> Config:
         runtime = chosen.name
         base_url = chosen.base_url
 
-    # 2. Validate model against the runtime's loaded list. Switch to the first
-    #    available model if the requested one isn't there.
+    # 2. Resolve model
     if chosen and chosen.models:
-        if not model:
-            model = chosen.models[0]
-            print(f"[auto] using model={model}")
-        elif model not in chosen.models:
-            # tolerate Ollama's missing :latest suffix
+        if model and model in chosen.models:
+            pass
+        elif model:
+            # tolerate missing :latest suffix
             alt = next((m for m in chosen.models if m.split(":")[0] == model.split(":")[0]), None)
             if alt:
                 print(f"[auto] model={model} not loaded; using {alt} (same family)")
                 model = alt
+            elif interactive:
+                print(f"[!] model '{model}' is not loaded on {chosen.name}.")
+                idx = _menu("Pick a model:", chosen.models)
+                model = chosen.models[idx]
+                print()
             else:
-                fallback = chosen.models[0]
-                print(f"[auto] model={model} not loaded on {chosen.name}; "
-                      f"using {fallback}. (loaded: {', '.join(chosen.models)})")
-                model = fallback
-
-    if not avail:
-        print("[warn] no local LLM runtime detected on default ports; "
-              "request will likely fail", file=sys.stderr)
+                model = chosen.models[0]
+                print(f"[auto] model not loaded; using {model}")
+        elif len(chosen.models) == 1:
+            model = chosen.models[0]
+        elif interactive:
+            idx = _menu("Pick a model:", chosen.models)
+            model = chosen.models[idx]
+            print()
+        else:
+            model = chosen.models[0]
+            print(f"[auto] using model={model}")
 
     return load_config(runtime=runtime, base_url=base_url, model=model, api_key=args.api_key)
 
