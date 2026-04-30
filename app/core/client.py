@@ -32,7 +32,8 @@ class RequestRecord:
     output_chars: int = 0
     chunks: int = 0
     timings: dict = field(default_factory=dict)  # raw runtime-reported timings
-    output_text: str = ""  # populated only when stream_chat(..., capture_output=True)
+    output_text: str = ""        # populated when stream_chat(..., capture_output=True)
+    reasoning_text: str = ""     # populated when capture_output=True for reasoning models
 
 
 class LLMClient:
@@ -117,6 +118,7 @@ class LLMClient:
         first_token_t: float | None = None
         last_token_t: float | None = None
         out_parts: list[str] = []
+        reason_parts: list[str] = []
 
         try:
             async with self._client.stream("POST", "/chat/completions", json=payload) as r:
@@ -147,9 +149,11 @@ class LLMClient:
 
                     for ch in obj.get("choices", []) or []:
                         delta = ch.get("delta", {}) or {}
-                        # Some runtimes/models stream reasoning tokens (deepseek-r1
-                        # via Ollama) on a separate field. Count those for TTFT
-                        # but only emit `content` to out_parts.
+                        # Reasoning models (deepseek-r1, qwen3) stream their
+                        # think-block tokens in `reasoning_content`. Count
+                        # those for TTFT/decode-tps timing, and capture them
+                        # separately so callers can inspect reasoning if the
+                        # answer leaks into it.
                         piece = delta.get("content")
                         reasoning = delta.get("reasoning_content") or delta.get("reasoning")
                         if piece or reasoning:
@@ -160,12 +164,15 @@ class LLMClient:
                             rec.chunks += 1
                             if piece:
                                 out_parts.append(piece)
+                            if reasoning and capture_output:
+                                reason_parts.append(reasoning)
 
             t_end = time.perf_counter()
             rec.ok = True
             rec.output_chars = sum(len(p) for p in out_parts)
             if capture_output:
                 rec.output_text = "".join(out_parts)
+                rec.reasoning_text = "".join(reason_parts)
             if first_token_t is not None:
                 rec.ttft_ms = (first_token_t - t0) * 1000.0
             rec.total_ms = ((last_token_t or t_end) - t0) * 1000.0

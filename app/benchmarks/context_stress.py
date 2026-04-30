@@ -109,7 +109,7 @@ async def run(
     tiers_k: list[int] | None = None,
     depth_pct: float = 0.5,
     auto_max: bool = True,
-    answer_max_tokens: int = 64,
+    answer_max_tokens: int = 512,  # generous so reasoning models have room to think + answer
 ) -> int:
     tiers_k = sorted(tiers_k or DEFAULT_TIERS_K)
     fp = model_footprint(cfg.model)
@@ -183,9 +183,21 @@ async def run(
                 prefill_tps = r.prompt_tokens * 1000.0 / r.ttft_ms
 
             response = (r.output_text or "").strip()
-            found = passcode.lower() in response.lower() if r.ok else False
+            reasoning = (r.reasoning_text or "").strip()
+            in_answer = passcode.lower() in response.lower()
+            in_reasoning = passcode.lower() in reasoning.lower()
+            found = in_answer or in_reasoning
 
-            status_str = ("✓ YES" if found else "✗ NO") if r.ok else "ERR"
+            if r.ok:
+                if in_answer:
+                    status_str = "✓ ANS"
+                elif in_reasoning:
+                    status_str = "✓ THINK"   # answer was in the think block
+                else:
+                    status_str = "✗ NO"
+            else:
+                status_str = "ERR"
+
             print(
                 f"{tier:>3}K     "
                 f"{target_tokens:>9} "
@@ -197,9 +209,11 @@ async def run(
             if not r.ok:
                 print(f"     error: {r.error}")
             elif not found:
-                # Show truncated response so the user can see what the model said
                 snippet = response.replace("\n", " ")[:80]
                 print(f"     answered: {snippet!r}")
+                if reasoning:
+                    rsnip = reasoning.replace("\n", " ")[:80]
+                    print(f"     thought : {rsnip!r}")
 
             results.append(NeedleResult(
                 tier_k=tier,
